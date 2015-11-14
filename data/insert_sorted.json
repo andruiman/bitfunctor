@@ -1,0 +1,20 @@
+{
+    "uses": [["Type", "nat"], ["Type", "natlist"], ["Function", "sorted"], ["Function", "insert"], ["Theorem", "eqge"], ["Theorem", "headinsert"], ["Theorem", "natgeswap"]],
+  "provides": ["Theorem", "insert_sorted"],
+  "code": "Lemma insert_sorted: forall (n: nat) (l: natlist),
+                     sorted l -> sorted (insert n l).
+Proof.
+ intros. induction l.
+ constructor.  constructor.
+ simpl. apply eqge.
+ simpl. remember (natge n n0) as b.
+ destruct b. constructor.
+ inversion H. auto. inversion H.
+ assert (head n0 (insert n l) = n \/ head n0 (insert n l) = (head n0 l)).
+ apply headinsert. auto.
+ inversion H4. rewrite H5. rewrite Heqb. auto.
+ rewrite H5. auto.
+ constructor. auto. simpl. apply natgeswap.
+ auto.
+Qed."
+}

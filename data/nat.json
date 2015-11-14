@@ -1,6 +1,6 @@
 {
   "uses": [],
-  "provides": [["Type", "nat"]],
+  "provides": ["Type", "nat"],
   "code": "Inductive nat := | O: nat
                             | S: nat -> nat.
           "

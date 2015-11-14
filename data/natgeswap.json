@@ -1,0 +1,11 @@
+{
+    "uses": [["Type", "nat"],  ["Function", "natge"]],
+  "provides": ["Theorem", "natgeswap"],
+  "code": "Lemma natgeswap : forall (a b: nat), natge a b = false -> natge b a = true.
+Proof.
+ intros. generalize dependent a. induction b.
+ intros. destruct a. auto. inversion H.
+ intros. destruct a. auto. simpl.
+ apply IHb. inversion H. auto.
+Qed."
+}

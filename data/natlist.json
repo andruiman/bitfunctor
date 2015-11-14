@@ -1,0 +1,7 @@
+{
+  "uses": [["Type", "nat"]],
+  "provides": ["Type", "natlist"],
+  "code": "Inductive natlist := 
+           | nil: natlist 
+           | cons: nat -> natlist -> natlist."
+}

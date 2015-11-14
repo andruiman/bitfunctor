@@ -1,0 +1,8 @@
+{
+  "uses": [],
+  "provides": ["Type", "bool"],
+  "code": "Inductive bool :=
+           | true: bool
+           | false: bool.
+          "
+}

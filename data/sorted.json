@@ -1,0 +1,7 @@
+{
+    "uses": [["Type", "natlist"], ["Function", "head"], ["Function", "natge"]],
+  "provides": ["Function", "sorted"],
+  "code": "Inductive sorted : natlist -> Prop :=
+| sortnil: sorted nil
+| sortcons: forall a m, sorted m -> (natge (head a m) a = true) -> sorted (cons a m)."
+}

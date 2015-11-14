@@ -1,0 +1,11 @@
+{
+    "uses": [["Type", "nat"], ["Type", "bool"]],
+  "provides": ["Function", "natge"],
+  "code": "Fixpoint natge (a b: nat) : bool :=
+match (a, b) with
+| (O, O) =>  true
+| (S _, O) =>  true
+| (O, S _) => false
+| (S a', S b') => natge a' b'
+end."
+}

@@ -1,0 +1,11 @@
+{
+    "uses": [["Type", "natlist"], ["Function", "sorted"], ["Function", "sort"], ["Theorem", "insert_sorted"]],
+  "provides": ["Theorem", "sort_sorted"],
+  "code": "Theorem sort_sorted: forall (l: natlist),
+                     sorted (sort l).
+Proof.
+ intros. induction l.
+ constructor. simpl. 
+ apply insert_sorted. auto.
+Qed."
+}
