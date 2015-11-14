@@ -1,3 +1,7 @@
-{"provides":[["type", "nat"]], "code":"Inductive nat := 
-| O: nat
-| S: nat -> nat." }
+{
+  "uses": [],
+  "provides": [["Type", "nat"]],
+  "code": "Inductive nat := | O: nat
+                            | S: nat -> nat.
+          "
+}

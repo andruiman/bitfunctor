@@ -8,6 +8,10 @@ import System.Directory
 import Data.ConfigFile as ConfigFile
 import Data.Either.Utils
 import Block
+import Data.Aeson (decode)
+import Data.Maybe (catMaybes)
+import Data.ByteString.Lazy as BL (readFile)
+import Control.Monad (filterM)
 
 
 outChain :: BlockChain -> String
@@ -51,21 +55,36 @@ allBalances :: [Node] -> String
 allBalances nodes = concat $ map (\n -> nodeBalances n nodes ++ "\n") nodes
 
 main = do
-    putStrLn "Starting cryptocurrency simulation..."
+
+    putStrLn "Reading configuration..."
 
     val <- ConfigFile.readfile ConfigFile.emptyCP "params.conf"
     let cp = forceEither val
 
     let outdir = forceEither $ ConfigFile.get cp "DEFAULT" "outdir"
 
-    let initSimData = SimulationData{
+    dataFiles <- getDirectoryContents "data"
+    let dataFilesFull = map (\f -> "data/" ++ f) dataFiles
+    codeFiles <- filterM (doesFileExist) dataFilesFull
+    files <- mapM BL.readFile codeFiles
+    let cl = catMaybes $ map decode files
+    let initSimData = SimulationData {
         timestamp = 0,
         simulationId = forceEither $ ConfigFile.get cp "DEFAULT" "simulation-id",
         maxConnectionsPerNode = forceEither $ ConfigFile.get cp "DEFAULT" "max-connections-per-node",
         addNodeAvgGap = forceEither $ ConfigFile.get cp "DEFAULT" "add-node-avg-gap",
-        deadline = forceEither $ ConfigFile.get cp "DEFAULT" "duration"}
+        deadline = forceEither $ ConfigFile.get cp "DEFAULT" "duration",
+        codeLibrary = cl
+      }
+
+    putStrLn "Reading code library..."
+    mapM_ print codeFiles
+    mapM_ print files
+    mapM_ print cl
 
     createDirectoryIfMissing True outdir
+
+    putStrLn "Starting cryptocurrency simulation..."
 
     let network = snd $ goThrouhTimeline (initSimData, genesisState)
     let ns = nodes network

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Transaction where
 
@@ -6,6 +7,7 @@ import Account
 
 import GHC.Generics
 import Data.Aeson
+import Data.Aeson.Types (typeMismatch)
 import qualified Data.ByteString as B
 
 type Timestamp = Int
@@ -13,7 +15,11 @@ type Timestamp = Int
 data PayloadType = Type | Func | Theorem
                    deriving (Eq, Show, Generic)
 
-instance FromJSON PayloadType
+instance FromJSON PayloadType where
+  parseJSON (String "Type")    = return Type
+  parseJSON (String "Func")    = return Func
+  parseJSON (String "Theorem") = return Theorem
+  parseJSON invalid            = typeMismatch "PayloadType" invalid
 
 instance ToJSON PayloadType where
   toEncoding = genericToEncoding defaultOptions
