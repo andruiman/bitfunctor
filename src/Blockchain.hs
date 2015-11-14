@@ -73,11 +73,13 @@ cumulativeNodeDifficulty node = totalDifficulty $ bestBlock $ localView node
 
 -- type BlockTree = [BlockChain]
 
+type Ledger = Map.Map Account Int
+
 data LocalView =
     LocalView {
         blockTree :: BlockTree,
         diffThreshold :: Double,
-        blockBalances :: Map.Map Block (Map.Map Account Int),
+        blockBalances :: Map.Map Block Ledger,
         blockTheory :: Map.Map Block Theory,
         bestBlock :: Block,
         -- all the transactions from the genesis, better do it as Block->Transaction mapping?
@@ -91,27 +93,30 @@ accountBalance view b acc = Map.findWithDefault 0 acc $ Map.findWithDefault Map.
 effectiveBalance :: LocalView -> Block -> Account -> Int
 effectiveBalance view b acc = accountBalance view b acc -- todo: simplification, no 1440 blocks waiting for now
 
-addMoney ::  Int -> Account ->  Map.Map Account Int -> Map.Map Account Int
+addMoney ::  Int -> Account ->  Ledger -> Ledger
 addMoney diff acc blns = let oldBalance = Map.findWithDefault 0 acc blns in
                          Map.insert acc (oldBalance + diff) blns
 
 -- added -(fee tx) to sender balance
 -- the order of arguments is changed to simplify later foldl's
-applyTx :: Map.Map Account Int -> Transaction  -> Map.Map Account Int
+applyTx :: Ledger -> Transaction  -> Ledger
 applyTx blns tx = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender tx) blns
     where
         amt = amount tx
 
-processBlock :: Block -> Map.Map Account Int -> Map.Map Account Int
-processBlock block priorBalances = appliedWithFees
+processBlock :: Block -> (Ledger, Theory) -> (Ledger, Theory)
+processBlock block (priorBalances, priorTheory) =
+    (appliedWithFees, appliedTheory)
     where
         txs = transactions block
         txApplied = foldl applyTx priorBalances txs
+        appliedTheory = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) priorTheory $ txs
+        deltaCmpl = (theoryComplexity appliedTheory) - (theoryComplexity priorTheory)
         fees = sum (map fee txs)
         appliedWithFees = addMoney fees (generator block) txApplied
 
-processTheory :: Block -> Theory -> Theory
-processTheory b t = foldl (addAtom) t (map toAtom $ map payload $ transactions b)
+--processTheory :: Block -> Theory -> Theory
+--processTheory b t = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) t $ transactions b
 
 deltaThreshold = 7
 
@@ -120,14 +125,16 @@ pushBlock node pb b =  let view = localView node in
                        if (Map.notMember b $ blockTree view) then
                         if (Map.member pb $ blockTree view) || (isGenesis pb) then
                            let prBal = Map.findWithDefault Map.empty pb $ blockBalances view in
-                           let prTh = Map.findWithDefault Map.empty pb $ blockTheory view in
+                           let prTh = Map.findWithDefault Map.empty pb $ blockTheory view in                           
                            let prTxs = Map.findWithDefault []       pb $ blockTransactions view in
                            let opb = addSortedBlock b (openBlocks node) in
                            let bb' = head opb in
-                           let updView = view {blockTree      = Map.insert b pb $ blockTree view,
-                              blockBalances     = Map.insert b (processBlock b prBal) $ blockBalances view,
+                           let (newBal, newTh) = processBlock b (prBal, prTh) in
+                           let updView = view {
+                              blockTree         = Map.insert b pb $ blockTree view,
+                              blockBalances     = Map.insert b newBal $ blockBalances view,
                               blockTransactions = Map.insert b (prTxs ++ (transactions b)) $ blockTransactions view,
-                              blockTheory = Map.insert b (processTheory b prTh) $ blockTheory view,
+                              blockTheory       = Map.insert b newTh $ blockTheory view,
                               bestBlock = let oldbb = bestBlock view in
                                           if (totalDifficulty bb' >= totalDifficulty oldbb) then bb' else oldbb,
                               diffThreshold = let olddt = diffThreshold view in

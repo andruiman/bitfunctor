@@ -17,7 +17,7 @@ data PayloadType = Type | Function | Theorem
 
 instance FromJSON PayloadType where
   parseJSON (String "Type")    = return Type
-  parseJSON (String "Func")    = return Func
+  parseJSON (String "Function")    = return Function
   parseJSON (String "Theorem") = return Theorem
   parseJSON invalid            = typeMismatch "PayloadType" invalid
 

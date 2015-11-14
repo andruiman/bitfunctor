@@ -3,6 +3,7 @@ module Theory where
 import qualified Data.Map as Map
 import Data.List
 import qualified Transaction as Tx
+import Data.Maybe (catMaybes)
 
 type TheoryKind = Tx.PayloadType
 
@@ -27,6 +28,26 @@ fetchDependentAtom s t = let atoms = let ma = Map.lookup s t in
 showDependentAtomCode :: String -> Theory ->  String
 showDependentAtomCode s t = concat $ map code (fetchDependentAtom s t)
 
-toAtom :: Tx.VerifiableTransactionPayload -> TheoryAtom
 
-                         
+--
+--  uses     :: [(PayloadType, String)],
+--  provides :: (PayloadType, String),
+--  code     :: String
+
+toName :: (TheoryKind, String) -> String
+toName (k,s) = (show $ k) ++ "#" ++ s
+
+toAtom :: Tx.VerifiableTransactionPayload -> Theory -> TheoryAtom
+toAtom vtxp t = TheoryAtom {name = toName $ Tx.provides vtxp,
+                            code = Tx.code vtxp,
+                            kind = fst $ Tx.provides vtxp,
+                            uses = catMaybes $ map (\i -> Map.lookup (toName i) t) $ Tx.uses vtxp}
+
+atomComplexity :: TheoryAtom -> Int
+atomComplexity a = case (kind a) of
+                     Tx.Function -> 10
+                     Tx.Type -> 1
+                     Tx.Theorem -> 30
+
+theoryComplexity :: Theory -> Int
+theoryComplexity t =  Map.foldr (\a c -> c + (atomComplexity a)) 0 t                         

@@ -72,7 +72,7 @@ genesisView = LocalView {blockBalances = Map.singleton genesisBlock genBalances,
                          bestBlock = genesisBlock,
                          diffThreshold = 0}
     where
-        genBalances = processBlock genesisBlock initialBalances
+        genBalances = fst $ processBlock genesisBlock (initialBalances, Map.empty)
         initialBalances = Map.singleton godAccount systemBalance
 
 
