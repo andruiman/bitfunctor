@@ -12,8 +12,8 @@ import qualified Data.ByteString as B
 
 type Timestamp = Int
 
-data PayloadType = Type | Func | Theorem
-                   deriving (Eq, Show, Generic)
+data PayloadType = Type | Function | Theorem
+                  deriving (Eq, Show, Generic)
 
 instance FromJSON PayloadType where
   parseJSON (String "Type")    = return Type
@@ -21,12 +21,12 @@ instance FromJSON PayloadType where
   parseJSON (String "Theorem") = return Theorem
   parseJSON invalid            = typeMismatch "PayloadType" invalid
 
-instance ToJSON PayloadType where
-  toEncoding = genericToEncoding defaultOptions
+--instance ToJSON PayloadType where
+--  toEncoding = genericToEncoding defaultOptions
 
 data VerifiableTransactionPayload = VerifiableTransactionPayload {
   uses     :: [(PayloadType, String)],
-  provides :: [(PayloadType, String)],
+  provides :: (PayloadType, String),
   code     :: String
 } deriving (Eq, Show, Generic)
 
@@ -41,8 +41,8 @@ data Transaction = Transaction { sender :: Account
 
 instance FromJSON VerifiableTransactionPayload
 
-instance ToJSON VerifiableTransactionPayload where
-  toEncoding = genericToEncoding defaultOptions
+--instance ToJSON VerifiableTransactionPayload where
+--  toEncoding = genericToEncoding defaultOptions
 
 
 instance Eq Transaction where
@@ -55,5 +55,5 @@ instance Ord Transaction where
 
 instance FromJSON Transaction
 
-instance ToJSON Transaction where
-  toEncoding = genericToEncoding defaultOptions
+--instance ToJSON Transaction where
+--  toEncoding = genericToEncoding defaultOptions

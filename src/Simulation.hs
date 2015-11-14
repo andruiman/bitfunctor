@@ -66,7 +66,7 @@ genesisBlock = block where
 
 
 genesisView :: LocalView
-genesisView = LocalView {blockBalances = Map.singleton genesisBlock genBalances,
+genesisView = LocalView {blockBalances = Map.singleton genesisBlock genBalances, blockTheory = Map.empty,
                          blockTree = Map.empty,
                          blockTransactions = Map.singleton genesisBlock (transactions genesisBlock),
                          bestBlock = genesisBlock,
