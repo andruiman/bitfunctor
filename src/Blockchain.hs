@@ -99,25 +99,25 @@ addMoney diff acc blns = let oldBalance = Map.findWithDefault 0 acc blns in
 
 -- added -(fee tx) to sender balance
 -- the order of arguments is changed to simplify later foldl's
-applyTx :: Ledger -> Transaction  -> Ledger
-applyTx blns tx = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender tx) blns
+applyTx :: (Ledger, Theory) -> Transaction  -> (Ledger, Theory)
+applyTx (blns, th) tx = (bals2, th1)
     where
+        bals1 = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender tx) blns
+        th1 = addAtom (toAtom (payload tx) th) th
+        deltaCmpl = (theoryComplexity th1) - (theoryComplexity th)
+        bonus = complexityPrice*deltaCmpl
+        bals2 = addMoney bonus (sender tx) bals1
         amt = amount tx
 
 processBlock :: Block -> (Ledger, Theory) -> (Ledger, Theory)
 processBlock block (priorBalances, priorTheory) =
-    (allApplied, appliedTheory)
+    (feesApplied, txAppliedT)
     where
         txs = transactions block
-        txApplied = foldl applyTx priorBalances txs
-        appliedTheory = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) priorTheory txs
-        -- deltaCmpl = (theoryComplexity appliedTheory) - (theoryComplexity priorTheory)
+        (txAppliedL, txAppliedT) = foldl applyTx (priorBalances, priorTheory) txs        
         fees = sum (map fee txs)
-        feesApplied = addMoney fees (generator block) txApplied
-        allApplied = foldl (\bals tx ->
-                               addMoney ((atomComplexity $ toAtom (payload tx) appliedTheory)*complexityPrice) (sender tx) bals)
-                           feesApplied txs
-
+        feesApplied = addMoney fees (generator block) txAppliedL
+        
 --processTheory :: Block -> Theory -> Theory
 --processTheory b t = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) t $ transactions b
 
