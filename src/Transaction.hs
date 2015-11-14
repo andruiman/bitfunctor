@@ -16,13 +16,16 @@ data PayloadType = Type | Function | Theorem
                   deriving (Eq, Show, Generic)
 
 instance FromJSON PayloadType where
-  parseJSON (String "Type")    = return Type
-  parseJSON (String "Function")    = return Function
-  parseJSON (String "Theorem") = return Theorem
-  parseJSON invalid            = typeMismatch "PayloadType" invalid
+  parseJSON (String "Type")     = return Type
+  parseJSON (String "Function") = return Function
+  parseJSON (String "Theorem")  = return Theorem
+  parseJSON invalid             = typeMismatch "PayloadType" invalid
 
---instance ToJSON PayloadType where
---  toEncoding = genericToEncoding defaultOptions
+instance ToJSON PayloadType where
+  toJSON Type     = toJSON ("Type"     :: String)
+  toJSON Function = toJSON ("Function" :: String)
+  toJSON Theorem  = toJSON ("Theorem"  :: String)
+ -- toEncoding = genericToEncoding defaultOptions
 
 data VerifiableTransactionPayload = VerifiableTransactionPayload {
   uses     :: [(PayloadType, String)],
@@ -41,7 +44,11 @@ data Transaction = Transaction { sender :: Account
 
 instance FromJSON VerifiableTransactionPayload
 
---instance ToJSON VerifiableTransactionPayload where
+instance ToJSON VerifiableTransactionPayload where
+  toJSON (VerifiableTransactionPayload u p c) = object [ "uses" .= u
+                                                       , "provides" .= p
+                                                       , "code" .= c
+                                                       ]
 --  toEncoding = genericToEncoding defaultOptions
 
 
@@ -55,5 +62,12 @@ instance Ord Transaction where
 
 instance FromJSON Transaction
 
---instance ToJSON Transaction where
+instance ToJSON Transaction where
+  toJSON tx@(Transaction{}) = object [ "sender" .= sender tx
+                                     , "recipient" .= recipient tx
+                                     , "amount" .= amount tx
+                                     , "fee" .= fee tx
+                                     , "txTimestamp" .= txTimestamp tx
+                                     , "payload" .= payload tx
+                                     ]
 --  toEncoding = genericToEncoding defaultOptions
