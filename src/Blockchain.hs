@@ -106,14 +106,17 @@ applyTx blns tx = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender
 
 processBlock :: Block -> (Ledger, Theory) -> (Ledger, Theory)
 processBlock block (priorBalances, priorTheory) =
-    (appliedWithFees, appliedTheory)
+    (allApplied, appliedTheory)
     where
         txs = transactions block
         txApplied = foldl applyTx priorBalances txs
-        appliedTheory = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) priorTheory $ txs
-        deltaCmpl = (theoryComplexity appliedTheory) - (theoryComplexity priorTheory)
+        appliedTheory = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) priorTheory txs
+        -- deltaCmpl = (theoryComplexity appliedTheory) - (theoryComplexity priorTheory)
         fees = sum (map fee txs)
-        appliedWithFees = addMoney fees (generator block) txApplied
+        feesApplied = addMoney fees (generator block) txApplied
+        allApplied = foldl (\bals tx ->
+                               addMoney ((atomComplexity $ toAtom (payload tx) appliedTheory)*complexityPrice) (sender tx) bals)
+                           feesApplied txs
 
 --processTheory :: Block -> Theory -> Theory
 --processTheory b t = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) t $ transactions b
