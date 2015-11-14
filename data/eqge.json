@@ -1,0 +1,9 @@
+{
+    "uses": [["Type", "nat"], ["Function", "natge"]],
+  "provides": ["Theorem", "eqge"],
+  "code": "Lemma eqge: forall n, natge n n = true.
+Proof.
+ intros. induction n.
+ auto. simpl. auto.
+Qed."
+}

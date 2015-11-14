@@ -34,3 +34,9 @@ instance FromJSON Account where
 
 accountId :: Account -> Int
 accountId acc = fromIntegral $ first8bytesAsNumber $ publicKey acc
+
+
+godAccount :: Account
+godAccount = Account {publicKey = B.pack[18, 89, -20, 33, -45, 26, 48, -119, -115, 124, -47, 96, -97, -128, -39, 102,
+                                        -117, 71, 120, -29, -39, 126, -108, 16, 68, -77, -97, 12, 68, -46, -27, 27], tfdepth = 1}
+

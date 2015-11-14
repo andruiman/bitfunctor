@@ -1,0 +1,12 @@
+{
+    "uses": [["Type", "natlist"], ["Type", "nat"], ["Function", "natge"]],
+  "provides": ["Function", "insert"],
+  "code": "Fixpoint insert (n:nat) (ms : natlist) {struct ms} : natlist :=
+match ms with
+| nil => cons n nil
+| cons m ms' => match (natge n m) with
+                | false => cons n ms             
+                | true => cons m (insert n ms')
+                end
+end."
+}

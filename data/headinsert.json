@@ -1,0 +1,12 @@
+{
+    "uses": [["Type", "nat"], ["Type", "natlist"], ["Function", "head"], ["Function", "insert"], ["Function", "sorted"]],
+  "provides": ["Theorem", "headinsert"],
+  "code": "Lemma headinsert: forall (a n:nat) (l: natlist),
+                  sorted l -> head a (insert n l) = n \/ head a (insert n l) = (head a l).
+Proof.
+ intros. induction l.
+ simpl. left. auto.
+ simpl. remember (natge n n0) as b. destruct b; auto.
+Qed.
+"
+}

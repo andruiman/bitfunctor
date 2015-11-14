@@ -1,0 +1,9 @@
+{
+    "uses": [["Type", "nat"], ["Type", "natlist"]],
+  "provides": ["Function", "head"],
+  "code": "Definition head (a: nat) (l: natlist) : nat :=
+match l with
+| nil => a
+| cons x _ => x
+end."
+}

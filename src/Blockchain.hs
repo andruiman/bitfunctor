@@ -7,6 +7,7 @@ import Transaction
 import Theory
 import Utils
 
+
 import qualified Data.Digest.Pure.SHA as SHA
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Binary.Get as BI
@@ -106,7 +107,7 @@ applyTx (blns, th) tx = (bals2, th1)
         th1 = addAtom (toAtom (payload tx) th) th
         deltaCmpl = (theoryComplexity th1) - (theoryComplexity th)
         bonus = complexityPrice*deltaCmpl
-        bals2 = addMoney bonus (sender tx) bals1
+        bals2 = addMoney (-bonus) godAccount $ addMoney bonus (sender tx) bals1
         amt = amount tx
 
 processBlock :: Block -> (Ledger, Theory) -> (Ledger, Theory)

@@ -1,0 +1,10 @@
+{
+    "uses": [["Type", "natlist"], ["Function", "insert"]],
+  "provides": ["Function", "sort"],
+  "code": "Fixpoint sort (ms : natlist) : natlist :=
+match ms with
+| nil => nil
+| cons m ms' => insert m (sort ms')
+end.
+"
+}
