@@ -18,6 +18,8 @@ two64 = 2**64
 maxBlocksFromPeer :: Int
 maxBlocksFromPeer = 10*1440
 
+complexityPrice :: Int
+complexityPrice = 1000
 
 -- tfdepth > 1 finite multibranch 
 --         = 1 singlebranch                                                                              

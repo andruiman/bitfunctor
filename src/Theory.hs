@@ -21,9 +21,9 @@ addAtom a t = Map.insert (name a) a t
 fetchDependentAtom :: String -> Theory -> [TheoryAtom]
 fetchDependentAtom s t = let atoms = let ma = Map.lookup s t in
                                      case ma of
-                                       Just a -> a:(concat $ map (\a' -> fetchDependentAtom (name a') t) (uses a))
+                                       Just a -> (concat $ map (\a' -> fetchDependentAtom (name a') t) (uses a)) ++ [a]
                                        Nothing -> []
-                         in nub $ reverse atoms
+                         in nub atoms
 
 showDependentAtomCode :: String -> Theory ->  String
 showDependentAtomCode s t = concat $ map code (fetchDependentAtom s t)
