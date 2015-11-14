@@ -1,74 +1,28 @@
 module Blockchain where
-import Constants 
+
+import Constants
+import Account
+import Block
+import Transaction
+import Utils
+
 import qualified Data.Digest.Pure.SHA as SHA
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Binary.Get as BI
 import qualified Data.Map as Map
 
+
 -- Account-based proof-of-stake cryptocurrency model
 
-type Timestamp = Int
-
-first8bytesAsNumber :: B.ByteString -> Integer
-first8bytesAsNumber bs =  fromIntegral $ BI.runGet BI.getWord64le $ B.take 8 bs
-
--- tfdepth > 1 multibranch 
---         = 1 singlebranch                                                                              
---         = 0 not forging                                                                               
---         < 0 full multibranch (please do not use - exponential growth)                                                                       
-data Account =
-    Account {
-        publicKey :: B.ByteString,
-        tfdepth :: Int
-    }
-
-instance Show Account where show acc = show $ accountId acc
-instance Eq Account where a1 == a2  = accountId a1 == accountId a2
-instance Ord Account where compare a1 a2 = compare (accountId a1) (accountId a2)
-
-accountId :: Account -> Int
-accountId acc = fromIntegral $ first8bytesAsNumber $ publicKey acc
-
-data Transaction =
-    Transaction {
-        sender :: Account,
-        recipient :: Account,
-        amount :: Int,
-        fee :: Int,
-        txTimestamp :: Timestamp
-    }  deriving (Show)
-
-instance Eq Transaction where t1 == t2  = sender t1 == sender t2
-                                          && recipient t1 == recipient t2
-                                          && txTimestamp t1 == txTimestamp t2
-                                          
-instance Ord Transaction where compare t1 t2 = compare (txTimestamp t1) (txTimestamp t2) 
 
 validate :: Transaction -> Bool
 validate _ = True
 
-data Block =
-    Block {      
-        transactions :: [Transaction],
-        baseTarget :: Integer,
-      -- theoretically need to move to LocalView  
-        totalDifficulty :: Double,
-        generator :: Account,
-        generationSignature :: B.ByteString,
-        blockTimestamp :: Timestamp
-    }  deriving (Show)
-
---removed (blockTimestamp)
-blockId :: Block -> Int
-blockId block = fromIntegral $ first8bytesAsNumber $ generationSignature block
 
 -- todo: add more checks?
 isGenesis :: Block -> Bool
 isGenesis b = blockTimestamp b == 0
 
---instance Show Block where show b = show $ blockId b
-instance Eq Block where b1 == b2  = blockId b1 == blockId b2
-instance Ord Block where compare b1 b2 = compare (blockId b1) (blockId b2)
 
 initialBaseTarget :: Integer
 initialBaseTarget = div maxHit (2*goalBlockTime*(fromIntegral systemBalance))
@@ -81,7 +35,7 @@ containsTx :: Block -> LocalView -> Transaction -> Bool
 containsTx block view tx = elem tx $ Map.findWithDefault [] block $ blockTransactions view
 
 calcHash :: [Integer] -> B.ByteString
-calcHash l = SHA.bytestringDigest $ SHA.sha256 $ B.pack $ map fromIntegral l 
+calcHash l = SHA.bytestringDigest $ SHA.sha256 $ B.pack $ map fromIntegral l
 
 calcGenerationSignature :: Block -> Account -> B.ByteString
 calcGenerationSignature prevBlock acct = SHA.bytestringDigest $ SHA.sha256 $ B.append (generationSignature prevBlock) $ publicKey acct
@@ -92,10 +46,10 @@ difficultyFunction x = 20e8/(fromIntegral x)
 
 formBlock :: Block -> Account -> Timestamp -> [Transaction] -> Block
 formBlock prevBlock gen timestamp txs =
-    Block {transactions = newTxs, blockTimestamp = timestamp, 
-           baseTarget = bt, totalDifficulty = td, generator = gen, 
+    Block {transactions = newTxs, blockTimestamp = timestamp,
+           baseTarget = bt, totalDifficulty = td, generator = gen,
            generationSignature = gs}
-    where newTxs = filter validate txs          
+    where newTxs = filter validate txs
           prevTarget = baseTarget prevBlock
           maxTarget = min (2*prevTarget)  maxBaseTarget
           minTarget = max (prevTarget `div` 2)  1
@@ -108,7 +62,7 @@ formBlock prevBlock gen timestamp txs =
 type BlockChain = [Block]
 
 -- from the next to parent
-type BlockTree = Map.Map Block Block    
+type BlockTree = Map.Map Block Block
 
 cumulativeDifficulty :: BlockChain -> Double
 cumulativeDifficulty chain = foldl (\cd b -> cd + (difficultyFunction $ baseTarget b)) 0 chain
@@ -119,7 +73,7 @@ cumulativeNodeDifficulty node = totalDifficulty $ bestBlock $ localView node
 -- type BlockTree = [BlockChain]
 
 data LocalView =
-    LocalView {      
+    LocalView {
         blockTree :: BlockTree,
         diffThreshold :: Double,
         blockBalances :: Map.Map Block (Map.Map Account Int),
@@ -136,7 +90,7 @@ effectiveBalance :: LocalView -> Block -> Account -> Int
 effectiveBalance view b acc = accountBalance view b acc -- todo: simplification, no 1440 blocks waiting for now
 
 addMoney ::  Int -> Account ->  Map.Map Account Int -> Map.Map Account Int
-addMoney diff acc blns = let oldBalance = Map.findWithDefault 0 acc blns in 
+addMoney diff acc blns = let oldBalance = Map.findWithDefault 0 acc blns in
                          Map.insert acc (oldBalance + diff) blns
 
 -- added -(fee tx) to sender balance
@@ -157,26 +111,26 @@ processBlock block priorBalances = appliedWithFees
 deltaThreshold = 7
 
 pushBlock :: Node -> Block -> Block -> Node
-pushBlock node pb b =  let view = localView node in 
-                       if (Map.notMember b $ blockTree view) then 
-                        if (Map.member pb $ blockTree view) || (isGenesis pb) then 
+pushBlock node pb b =  let view = localView node in
+                       if (Map.notMember b $ blockTree view) then
+                        if (Map.member pb $ blockTree view) || (isGenesis pb) then
                            let prBal = Map.findWithDefault Map.empty pb $ blockBalances view in
-                           let prTxs = Map.findWithDefault []        pb $ blockTransactions view in 
+                           let prTxs = Map.findWithDefault []        pb $ blockTransactions view in
                            let opb = addSortedBlock b (openBlocks node) in
                            let bb' = head opb in
-                           let updView = view {blockTree      = Map.insert b pb $ blockTree view, 
+                           let updView = view {blockTree      = Map.insert b pb $ blockTree view,
                               blockBalances     = Map.insert b (processBlock b prBal) $ blockBalances view,
                               blockTransactions = Map.insert b (prTxs ++ (transactions b)) $ blockTransactions view,
                               bestBlock = let oldbb = bestBlock view in
                                           if (totalDifficulty bb' >= totalDifficulty oldbb) then bb' else oldbb,
                               diffThreshold = let olddt = diffThreshold view in
                                               if (totalDifficulty bb' - olddt >= deltaThreshold) then olddt + deltaThreshold
-                                                                                                 else olddt} in                                              
-                           node {localView = updView, pendingBlocks = (pb,b):(pendingBlocks node), 
+                                                                                                 else olddt} in
+                           node {localView = updView, pendingBlocks = (pb,b):(pendingBlocks node),
                                  openBlocks = opb}
-                        -- need to add more logic when prevBlock not found - try to download it or whatever   
-                        else node   
-                       else node                   
+                        -- need to add more logic when prevBlock not found - try to download it or whatever
+                        else node
+                       else node
 
 pushBlocks :: Node -> [(Block, Block)] -> Node
 pushBlocks = foldl (\n (pb,b) -> pushBlock n pb b)
@@ -215,7 +169,7 @@ processIncomingBlock node pb block = updNode
 
 
 accBalance :: Node -> Account -> Int
-accBalance node acc = let v = localView node in 
+accBalance node acc = let v = localView node in
                       accountBalance v (bestBlock v) acc
 
 selfBalance :: Node -> Int
@@ -244,58 +198,58 @@ addSortedBlock b lb@(b':bs) =  if ((totalDifficulty b) >= (totalDifficulty b')) 
 
 
 forgeBlock :: Block -> Node -> Timestamp -> Node
-forgeBlock pb node ts = 
+forgeBlock pb node ts =
    let view  = localView node in
-   let prTxs = Map.findWithDefault [] pb $ blockTransactions view in 
-   let txs  = filter (\tx -> notElem tx prTxs) $ pendingTxs node in 
-   let acct = account node in 
+   let prTxs = Map.findWithDefault [] pb $ blockTransactions view in
+   let txs  = filter (\tx -> notElem tx prTxs) $ pendingTxs node in
+   let acct = account node in
    let effb = effectiveBalance view pb acct in
    let hit  = calculateHit pb acct in
    let checkHit = verifyHit hit pb ts effb in
    let openb = openBlocks node in
-      if checkHit then let newb = formBlock pb acct ts txs in                    
+      if checkHit then let newb = formBlock pb acct ts txs in
                         pushBlock node pb newb
                   else node {openBlocks = addSortedBlock pb openb}
-                    
-                    
+
+
 splitBlocks :: Int -> [Block]  -> ([Block], [Block])
 splitBlocks k lb  | k < 0 = (lb, [])
 --splitBlocks 0 lb  = (defl, [])
 splitBlocks k lb  | k >= 0 = splitAt k lb
-        
-forgeBlocks ::  Timestamp -> Node -> Node          
-forgeBlocks ts node = let acc = account node in                    
+
+forgeBlocks ::  Timestamp -> Node -> Node
+forgeBlocks ts node = let acc = account node in
                       let view = localView node in
-                      let opb = openBlocks node in                      
-                      let (blocks, rb) = splitBlocks (tfdepth acc) opb in                             
+                      let opb = openBlocks node in
+                      let (blocks, rb) = splitBlocks (tfdepth acc) opb in
                       let bs = filter (\b -> totalDifficulty b >= diffThreshold view) blocks in
                       let node' = node {openBlocks = []} in
                       foldl (\n pb -> forgeBlock pb n ts) node' blocks
-                      
-treeChain :: Block -> BlockTree -> BlockChain                     
-treeChain b t = if Map.member b t then 
+
+treeChain :: Block -> BlockTree -> BlockChain
+treeChain b t = if Map.member b t then
                   let pb = Map.findWithDefault b b t in
                            (treeChain pb t) ++ [b]
                 else [b]
-                                                                                                     
+
 nodeChain :: Block -> Node -> BlockChain
 nodeChain b node = let view = localView node in
                    let tree = blockTree view in
                    treeChain b tree
 
-                      
+
 bestChain :: Node -> BlockChain
-bestChain node = let view = localView node in                
+bestChain node = let view = localView node in
                  treeChain (bestBlock view) (blockTree view)
-              
-            
+
+
 -- removed accumulator common to reduce (++) operations
 commonChain :: BlockChain -> BlockChain -> BlockChain
 commonChain chain1 chain2 = case (chain1, chain2) of
         (bl1:ct1, bl2:ct2) -> if bl1 == bl2 then bl1:(commonChain ct1 ct2) else []
         _ -> []
 
--- Nodes are modifiyng !!! so map works wrong, changed [Node] to [Int]
+-- Nodes are mutable !!! so map works wrong, changed [Node] to [Int]
 data Network =
     Network {
         nodes :: [Node],
@@ -305,11 +259,11 @@ data Network =
 
 outgoingConnections :: Network -> Node -> [Node]
 outgoingConnections network node = let ids = Map.findWithDefault [] node (connections network) in
-                                   filter (\n -> elem (nodeId n) ids) (nodes network) 
+                                   filter (\n -> elem (nodeId n) ids) (nodes network)
 
 outgoingConnectionsIds :: Network -> Node -> [Int]
 outgoingConnectionsIds network node = Map.findWithDefault [] node (connections network)
-                                 
+
 
 updateNode :: Node -> Network -> Network
 updateNode nd network = network {nodes = ns}
@@ -319,7 +273,7 @@ updateNode nd network = network {nodes = ns}
 
 --updateNode nd network = network {nodes = ns}
 --    where
-      -- (==) for nodes as Ids 
+      -- (==) for nodes as Ids
 --        ns = map (\n -> if (n == nd) then nd else n) (nodes network)
 
 
