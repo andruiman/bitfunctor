@@ -1,0 +1,3 @@
+{"provides":[["type", "nat"]], "code":"Inductive nat := 
+| O: nat
+| S: nat -> nat." }
