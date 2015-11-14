@@ -16,7 +16,8 @@ data TheoryAtom = TheoryAtom {
 type Theory = Map.Map String TheoryAtom
 
 addAtom :: TheoryAtom -> Theory -> Theory
-addAtom a t = Map.insert (name a) a t
+addAtom a t = if (Map.member (name a) t) then t
+              else Map.insert (name a) a t
 
 fetchDependentAtom :: String -> Theory -> [TheoryAtom]
 fetchDependentAtom s t = let atoms = let ma = Map.lookup s t in
@@ -45,9 +46,9 @@ toAtom vtxp t = TheoryAtom {name = toName $ Tx.provides vtxp,
 
 atomComplexity :: TheoryAtom -> Int
 atomComplexity a = case (kind a) of
-                     Tx.Function -> 10
+                     Tx.Function -> 1
                      Tx.Type -> 1
-                     Tx.Theorem -> 30
+                     Tx.Theorem -> 1
 
 theoryComplexity :: Theory -> Int
 theoryComplexity t =  Map.foldr (\a c -> c + (atomComplexity a)) 0 t

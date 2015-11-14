@@ -3,6 +3,7 @@ module Main where
 
 import Simulation
 import Blockchain
+import Transaction
 import qualified Data.Map as Map
 import System.Directory
 import Data.ConfigFile as ConfigFile
@@ -91,14 +92,14 @@ main = do
     network <- runSimulation (outputResults stateDir) (initSimData, genesisState)
 
     putStrLn "\nFinal simulation results:"
-    outputResults outDir network
+    outputResults outDir 0 network
 
     putStrLn "\nCryptocurrency simulation has been finished"
 
 
-outputResults :: String -> Network -> IO ()
-outputResults outdir network = do
-  putStrLn "===================================================================="
+outputResults :: String -> Timestamp -> Network -> IO ()
+outputResults outdir ts network = do
+  putStrLn ("====================================================================" ++ (show ts))
 
   let ns = nodes network
 
@@ -112,6 +113,19 @@ outputResults outdir network = do
 
   putStrLn "Balances (from the nodes' point of view):"
   putStrLn $ show $ map selfBalance ns
+
+  putStrLn "Network connections:"
+  putStrLn $ show $ (Map.mapKeys nodeId $ connections network)
+
+  putStrLn "PendingTxs:"
+  putStrLn $ show $ (map (length.pendingTxs) $ nodes network)
+
+  putStrLn "ProcTxs:"
+  putStrLn $ show $ (map (length.procTxs) $ nodes network)
+
+  putStrLn "Open blocks:"
+  putStrLn $ show $ (map (length.openBlocks) $ nodes network)
+
 
   putStrLn "\n"
   putStrLn "Node Id : Self balance <-> Common chain lengths with other nodes: "

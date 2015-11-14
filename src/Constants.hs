@@ -1,7 +1,7 @@
 module Constants where
 
 minFee :: Int
-minFee = 1
+minFee = 0
 
 goalBlockTime :: Integer
 goalBlockTime = 60

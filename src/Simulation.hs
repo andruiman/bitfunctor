@@ -61,7 +61,7 @@ genesisBlock :: Block
 genesisBlock = block where
     -- amt = systemBalance `div` (length earlyInvestors)
     -- genesisTxs = map (\ acc -> Transaction {sender = godAccount, recipient = acc, amount = amt, fee = 0, txTimestamp = 0}) earlyInvestors
-    block = Block {transactions = [],  blockTimestamp = 0, baseTarget = 10*initialBaseTarget, totalDifficulty = 0.0,
+    block = Block {transactions = [],  blockTimestamp = 0, baseTarget = initialBaseTarget, totalDifficulty = 0.0,
                          generator = godAccount, generationSignature = B.replicate 64 0}
 
 
@@ -140,7 +140,7 @@ dropConnections sd network = case (timestamp sd) `mod` 60 of
 randomNeighbour :: SimulationData -> Node -> Network -> Maybe Node
 randomNeighbour sd node network = if nbcnt == 0 then Nothing
                                     else let idx = fst $ randomR (0, nbcnt - 1) (nodeGen sd node) in
-                                        Just $ neighbours !! idx
+                                         Just $ neighbours !! idx
                                   where
                                     neighbours = outgoingConnections network node
                                     nbcnt = length neighbours
@@ -152,7 +152,7 @@ addNode sd initNetwork = case rnd  of
                             _ -> initNetwork
                         where
                             gen = simpleGen sd
-                            rnd::Int = fst $ randomR (0, addNodeAvgGap sd) gen
+                            rnd::Int = fst $ randomR (0, 100) gen
 
 makePairs :: BlockChain -> [(Block, Block)]
 makePairs [] = []
@@ -194,7 +194,9 @@ sendTransactionsOut :: SimulationData -> Node -> Network -> Network
 sendTransactionsOut sd node network = case randomNeighbour sd node network of
                     Just neighbour ->   let txsToSend = pendingTxs node in
                                         let otherTxs = pendingTxs neighbour in
-                                        let newTxs = filter (\tx -> notElem tx otherTxs) txsToSend in
+                                        let newTxs' = filter (\tx -> notElem tx otherTxs) txsToSend in
+                                        let nodeProcTxs = procTxs node in
+                                        let newTxs = filter (\tx -> notElem tx nodeProcTxs) newTxs' in
                                         let updTxs = otherTxs ++ newTxs in
                                          updateNode neighbour {pendingTxs = updTxs} network
                     Nothing -> network
@@ -235,23 +237,23 @@ propagateLastBlocks sd network = foldl (sendBlocksOut sd) network (nodes network
 --todo: regulate the range of transactions amount
 generateTransactionsForNode :: SimulationData -> Node -> Network -> Node
 generateTransactionsForNode sd node network =
-    if (timestamp sd < 2*(deadline sd) `div` 3) && (selfBalance node > 1000000) then
+      if (selfBalance node >= minFee) then
         let gen = nodeGen sd node in
-        let ns = nodes network in
-        let amt = fst $ randomR (100000 , 1000000) gen in -- fst $ randomR (1 , (selfBalance node) `div` 2) gen in
+--        let ns = nodes network in
+--        let amt = fst $ randomR (100000 , 1000000) gen in -- fst $ randomR (1 , (selfBalance node) `div` 2) gen in
         let codeIdx = fst $ randomR (0 , length (codeLibrary sd) - 1) gen in
-        let rcp = account $ ns !! (fst $ randomR (0, length ns - 1) gen) in
-        if (rcp /= account node) then
-          let tstamp = timestamp sd in
-          let tx = Transaction { sender = account node
-                               , recipient = rcp
-                               , amount = amt
+--        let rcp = account $ ns !! (fst $ randomR (0, length ns - 1) gen) in
+--        if (rcp /= account node) then
+        let tstamp = timestamp sd in
+        let tx = Transaction { sender = account node
+                               , recipient = godAccount
+                               , amount = 0
                                , fee = minFee
                                , txTimestamp = tstamp
                                , payload = codeLibrary sd !! codeIdx
                                } in
-            node {pendingTxs = tx:(pendingTxs node)}
-        else node
+          node {pendingTxs = tx:(pendingTxs node)}
+--        else node
     else node
 
 -- obsolete?
@@ -267,9 +269,9 @@ generateTransactionsForNode sd node network =
 -- todo: move "10" to constants
 generateTransactions :: SimulationData -> Network -> Network
 generateTransactions sd network = network {nodes = ns} where
-                         ns = map (\n -> -- if (selfBalance n < 200*minFee) then n else
+                         ns = map (\n -> if (account n == godAccount ) then n else
                                     let gen = nodeGen sd n in
-                                    let r::Int = fst $ randomR (0, 10) gen in
+                                    let r::Int = fst $ randomR (0, 60) gen in
                                     case r of
                                      1 -> generateTransactionsForNode sd n network
                                      _ -> n) (nodes network)
@@ -308,22 +310,22 @@ systemTransform sd network = networkForge sd $
                              generateTransactions sd $
                              -- propagateLastBlocks sd $
                              downloadBlocksNetwork sd $
-                             dropConnections sd $
+                             -- dropConnections sd $
                              generateConnections sd $
                              addNode sd network
                              -- addInvestorNode sd network
 
 
-goThrouhTimeline :: (Network -> IO ()) -> (SimulationData, Network) -> IO (SimulationData, Network)
+goThrouhTimeline :: (Timestamp -> Network -> IO ()) -> (SimulationData, Network) -> IO (SimulationData, Network)
 goThrouhTimeline notifyState (sd, nw) | notExpired sd = do
   let nextSimulationData = incTimestamp sd
   let nextNetworkState = systemTransform nextSimulationData nw
-  notifyState nextNetworkState
+  notifyState (timestamp nextSimulationData) nextNetworkState
   goThrouhTimeline notifyState (nextSimulationData, nextNetworkState)
 goThrouhTimeline _ (sd, nw) = return (sd, nw)
 
 
-runSimulation :: (Network -> IO ()) -> (SimulationData, Network) -> IO Network
+runSimulation :: (Timestamp -> Network -> IO ()) -> (SimulationData, Network) -> IO Network
 runSimulation notifyState (ini, net) = do
   (_, net') <- goThrouhTimeline notifyState (ini, net)
   return net'

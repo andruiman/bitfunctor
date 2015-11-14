@@ -134,18 +134,20 @@ pushBlock node pb b =  let view = localView node in
                            let opb = addSortedBlock b (openBlocks node) in
                            let bb' = head opb in
                            let (newBal, newTh) = processBlock b (prBal, prTh) in
+                           let pTxs = pendingTxs node in
                            let updView = view {
                               blockTree         = Map.insert b pb $ blockTree view,
                               blockBalances     = Map.insert b newBal $ blockBalances view,
                               blockTransactions = Map.insert b (prTxs ++ (transactions b)) $ blockTransactions view,
                               blockTheory       = Map.insert b newTh $ blockTheory view,
-                              bestBlock = let oldbb = bestBlock view in
-                                          if (totalDifficulty bb' >= totalDifficulty oldbb) then bb' else oldbb,
+                              bestBlock = b, -- let oldbb = bestBlock view in
+                                            -- if (totalDifficulty bb' >= totalDifficulty oldbb) then bb' else oldbb,
                               diffThreshold = let olddt = diffThreshold view in
                                               if (totalDifficulty bb' - olddt >= deltaThreshold) then olddt + deltaThreshold
                                                                                                  else olddt} in
                            node {localView = updView, pendingBlocks = (pb,b):(pendingBlocks node),
-                                 openBlocks = opb}
+                                 openBlocks = opb, pendingTxs = [] }
+                        -- filter (\tx -> notElem tx (transactions b)) pTxs
                         -- need to add more logic when prevBlock not found - try to download it or whatever
                         else node
                        else node
@@ -153,11 +155,18 @@ pushBlock node pb b =  let view = localView node in
 pushBlocks :: Node -> [(Block, Block)] -> Node
 pushBlocks = foldl (\n (pb,b) -> pushBlock n pb b)
 
+procTxs :: Node -> [Transaction]
+procTxs node = let mlt = Map.lookup (bestBlock $ localView node) (blockTransactions $ localView node) in
+               case mlt of
+                Just lt -> lt
+                Nothing -> []
+
 data Node =
     Node {
         localView :: LocalView,
         -- renamed to exclude inappropriate usage
         pendingTxs :: [Transaction],
+        -- processedTxs :: [Transaction],
         openBlocks :: [Block],
         pendingBlocks :: [(Block,Block)],
         account :: Account -- simplification - one account per node
@@ -240,7 +249,7 @@ forgeBlocks ts node = let acc = account node in
                       let view = localView node in
                       let opb = openBlocks node in
                       let (blocks, rb) = splitBlocks (tfdepth acc) opb in
-                      let bs = filter (\b -> totalDifficulty b >= diffThreshold view) blocks in
+                      let bs = blocks in -- filter (\b -> totalDifficulty b >= diffThreshold view) blocks in
                       let node' = node {openBlocks = []} in
                       foldl (\n pb -> forgeBlock pb n ts) node' blocks
 
@@ -276,7 +285,7 @@ data Network =
 
 
 outgoingConnections :: Network -> Node -> [Node]
-outgoingConnections network node = let ids = Map.findWithDefault [] node (connections network) in
+outgoingConnections network node = let ids = outgoingConnectionsIds network node in
                                    filter (\n -> elem (nodeId n) ids) (nodes network)
 
 outgoingConnectionsIds :: Network -> Node -> [Int]
