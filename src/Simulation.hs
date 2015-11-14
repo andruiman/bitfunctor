@@ -314,7 +314,16 @@ systemTransform sd network = networkForge sd $
                              -- addInvestorNode sd network
 
 
-goThrouhTimeline :: (SimulationData, Network) -> (SimulationData, Network)
-goThrouhTimeline (sd, nw) | notExpired sd =
-        goThrouhTimeline (sdinc, (systemTransform sdinc nw)) where sdinc = incTimestamp sd
-goThrouhTimeline (sd, nw) = (sd, nw)
+goThrouhTimeline :: (Network -> IO ()) -> (SimulationData, Network) -> IO (SimulationData, Network)
+goThrouhTimeline notifyState (sd, nw) | notExpired sd = do
+  let nextSimulationData = incTimestamp sd
+  let nextNetworkState = systemTransform nextSimulationData nw
+  notifyState nextNetworkState
+  goThrouhTimeline notifyState (nextSimulationData, nextNetworkState)
+goThrouhTimeline _ (sd, nw) = return (sd, nw)
+
+
+runSimulation :: (Network -> IO ()) -> (SimulationData, Network) -> IO Network
+runSimulation notifyState (ini, net) = do
+  (_, net') <- goThrouhTimeline notifyState (ini, net)
+  return net'

@@ -61,7 +61,8 @@ main = do
     val <- ConfigFile.readfile ConfigFile.emptyCP "params.conf"
     let cp = forceEither val
 
-    let outdir = forceEither $ ConfigFile.get cp "DEFAULT" "outdir"
+    let outDir   = forceEither $ ConfigFile.get cp "DEFAULT" "outdir"
+    let stateDir = forceEither $ ConfigFile.get cp "DEFAULT" "statedir"
 
     dataFiles <- getDirectoryContents "data"
     let dataFilesFull = map (\f -> "data/" ++ f) dataFiles
@@ -82,31 +83,43 @@ main = do
     mapM_ print files
     mapM_ print cl
 
-    createDirectoryIfMissing True outdir
+    createDirectoryIfMissing True outDir
+    createDirectoryIfMissing True stateDir
 
     putStrLn "Starting cryptocurrency simulation..."
 
-    let network = snd $ goThrouhTimeline (initSimData, genesisState)
-    let ns = nodes network
+    network <- runSimulation (outputResults stateDir) (initSimData, genesisState)
 
-    writeFile (concat [outdir, "/network"]) (show network)
-    writeFile (concat [outdir, "/cons"]) (outConnection network)
-    mapM_ (\i -> writeFile (concat [outdir, "/node", show i]) (show (ns !! i))) [0..(length ns - 1)]
-    mapM_ (\i -> writeFile (concat [outdir, "/chain", show i]) (outChainNode $ ns !! i)) [0..(length ns - 1)]
-    mapM_ (\i -> writeFile (concat [outdir, "/txs", show i]) (outTxs $ ns !! i)) [0..(length ns - 1)]
-    mapM_ (\i -> writeFile (concat [outdir, "/common", show i]) (outChain $ commonChain (bestChain $ ns !! i) (bestChain $ ns !! (i+1)))) [0..(length ns - 2)]
+    putStrLn "\nFinal simulation results:"
+    outputResults outDir network
 
-    putStrLn "Final balances(from self point of view):"
-    putStrLn $ show $ map selfBalance ns
+    putStrLn "\nCryptocurrency simulation has been finished"
 
-    putStrLn "\n"
-    putStrLn "Node Id : Self balance <-> Common chain lengths with other nodes: "
-    let cc = commonChains ns
-    writeFile (concat [outdir, "/commons"]) cc
-    putStrLn $ cc
 
-    let bb = allBalances ns
-    writeFile (concat [outdir, "/balances"]) bb
-    putStrLn $ bb
+outputResults :: String -> Network -> IO ()
+outputResults outdir network = do
+  putStrLn "===================================================================="
 
-    putStrLn "\n Cryptocurrency simulation has been finished"
+  let ns = nodes network
+
+  writeFile (concat [outdir, "/network"]) (show network)
+  writeFile (concat [outdir, "/cons"]) (outConnection network)
+  mapM_ (\i -> writeFile (concat [outdir, "/node", show i]) (show (ns !! i))) [0..(length ns - 1)]
+  mapM_ (\i -> writeFile (concat [outdir, "/chain", show i]) (outChainNode $ ns !! i)) [0..(length ns - 1)]
+  mapM_ (\i -> writeFile (concat [outdir, "/txs", show i]) (outTxs $ ns !! i)) [0..(length ns - 1)]
+  mapM_ (\i -> writeFile (concat [outdir, "/common", show i]) (outChain $ commonChain (bestChain $ ns !! i) (bestChain $ ns !! (i+1)))) [0..(length ns - 2)]
+
+
+  putStrLn "Balances (from the nodes' point of view):"
+  putStrLn $ show $ map selfBalance ns
+
+  putStrLn "\n"
+  putStrLn "Node Id : Self balance <-> Common chain lengths with other nodes: "
+  let cc = commonChains ns
+  writeFile (concat [outdir, "/commons"]) cc
+  putStrLn $ cc
+
+  let bb = allBalances ns
+  writeFile (concat [outdir, "/balances"]) bb
+  putStrLn $ bb
+  putStrLn "===================================================================="

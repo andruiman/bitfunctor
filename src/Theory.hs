@@ -50,4 +50,4 @@ atomComplexity a = case (kind a) of
                      Tx.Theorem -> 30
 
 theoryComplexity :: Theory -> Int
-theoryComplexity t =  Map.foldr (\a c -> c + (atomComplexity a)) 0 t                         
+theoryComplexity t =  Map.foldr (\a c -> c + (atomComplexity a)) 0 t
