@@ -43,7 +43,7 @@ rescan = pushBlocks
 
 
 earlyInvestors :: [Account]
-earlyInvestors = map (\i -> generateAccount $ mkStdGen i) [0..19]
+earlyInvestors = map (\i -> generateAccount $ mkStdGen i) []
 
 
 godAccount :: Account
@@ -53,9 +53,9 @@ godAccount = Account {publicKey = B.pack[18, 89, -20, 33, -45, 26, 48, -119, -11
 
 genesisBlock :: Block
 genesisBlock = block where
-    amt = systemBalance `div` (length earlyInvestors)
-    genesisTxs = map (\ acc -> Transaction {sender = godAccount, recipient = acc, amount = amt, fee = 0, txTimestamp = 0}) earlyInvestors
-    block = Block {transactions = genesisTxs,  blockTimestamp = 0, baseTarget = 10*initialBaseTarget, totalDifficulty = 0.0, 
+    -- amt = systemBalance `div` (length earlyInvestors)
+    -- genesisTxs = map (\ acc -> Transaction {sender = godAccount, recipient = acc, amount = amt, fee = 0, txTimestamp = 0}) earlyInvestors
+    block = Block {transactions = [],  blockTimestamp = 0, baseTarget = 10*initialBaseTarget, totalDifficulty = 0.0, 
                          generator = godAccount, generationSignature = B.replicate 64 0}
 
 
@@ -71,7 +71,7 @@ genesisView = LocalView {blockBalances = Map.singleton genesisBlock genBalances,
 
 
 genesisState :: Network
-genesisState = Network {nodes = [createNode $ head earlyInvestors], connections = Map.empty}
+genesisState = Network {nodes = [createNode $ godAccount], connections = Map.empty}
 
 
 -----------Helper functions----------------------
@@ -271,21 +271,21 @@ networkForge sd nw =
    
     
 --dirty hack :(
-addInvestorNode :: SimulationData -> Network -> Network
-addInvestorNode sd network = case timestamp sd of
-            1000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 1]}
-            2000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 2]}
-            4000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 3]}
-            5000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 4]}
-            6000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 5]}
-            7000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 6]}
-            7500 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 7]}
-            8000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 8]}
-            9000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 9]}
-            10000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 10]}
-            12000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 11]}
-            14000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 12]}
-            _ -> network
+--addInvestorNode :: SimulationData -> Network -> Network
+--addInvestorNode sd network = case timestamp sd of
+--            1000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 1]}
+--           2000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 2]}
+--            4000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 3]}
+--            5000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 4]}
+--            6000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 5]}
+--            7000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 6]}
+--            7500 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 7]}
+--            8000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 8]}
+--            9000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 9]}
+--            10000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 10]}
+--            12000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 11]}
+--            14000 -> network{nodes = nodes network ++ [createNode $ earlyInvestors !! 12]}
+--            _ -> network
 
 
 -- propagateLastBlocks can be removed without the loss in convergence ATM ???
@@ -297,8 +297,8 @@ systemTransform sd network = networkForge sd $
                              downloadBlocksNetwork sd $
                              dropConnections sd $ 
                              generateConnections sd $ 
-                             addNode sd $ 
-                             addInvestorNode sd network
+                             addNode sd network 
+                             -- addInvestorNode sd network
 
 
 goThrouhTimeline :: (SimulationData, Network) -> (SimulationData, Network)
