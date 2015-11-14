@@ -7,6 +7,7 @@ import qualified Data.Map as Map
 import System.Directory
 import Data.ConfigFile as ConfigFile
 import Data.Either.Utils
+import Block
 
 
 outChain :: BlockChain -> String
@@ -47,7 +48,7 @@ nodeBalances node ns = let bals =  map (accBalance node) $ map account ns in
   concat [show (nodeId node), "->" , show $ (sum bals): bals]
 
 allBalances :: [Node] -> String
-allBalances nodes = concat $ map (\n -> nodeBalances n nodes ++ "\n") nodes   
+allBalances nodes = concat $ map (\n -> nodeBalances n nodes ++ "\n") nodes
 
 main = do
     putStrLn "Starting cryptocurrency simulation..."
