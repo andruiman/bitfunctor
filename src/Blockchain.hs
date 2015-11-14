@@ -140,13 +140,13 @@ pushBlock node pb b =  let view = localView node in
                               blockBalances     = Map.insert b newBal $ blockBalances view,
                               blockTransactions = Map.insert b (prTxs ++ (transactions b)) $ blockTransactions view,
                               blockTheory       = Map.insert b newTh $ blockTheory view,
-                              bestBlock = b, -- let oldbb = bestBlock view in
-                                            -- if (totalDifficulty bb' >= totalDifficulty oldbb) then bb' else oldbb,
+                              bestBlock =  let oldbb = bestBlock view in
+                                            if (totalDifficulty bb' >= totalDifficulty oldbb) then bb' else oldbb,
                               diffThreshold = let olddt = diffThreshold view in
                                               if (totalDifficulty bb' - olddt >= deltaThreshold) then olddt + deltaThreshold
                                                                                                  else olddt} in
                            node {localView = updView, pendingBlocks = (pb,b):(pendingBlocks node),
-                                 openBlocks = opb, pendingTxs = [] }
+                                 openBlocks = opb, pendingTxs = filter (\tx -> notElem tx (transactions b)) pTxs }
                         -- filter (\tx -> notElem tx (transactions b)) pTxs
                         -- need to add more logic when prevBlock not found - try to download it or whatever
                         else node
@@ -228,6 +228,8 @@ forgeBlock :: Block -> Node -> Timestamp -> Node
 forgeBlock pb node ts =
    let view  = localView node in
    let prTxs = Map.findWithDefault [] pb $ blockTransactions view in
+   let th = Map.findWithDefault Map.empty pb $ blockTheory view in
+-- TODO: add validation txs with th
    let txs  = filter (\tx -> notElem tx prTxs) $ pendingTxs node in
    let acct = account node in
    let effb = effectiveBalance view pb acct in
@@ -249,7 +251,7 @@ forgeBlocks ts node = let acc = account node in
                       let view = localView node in
                       let opb = openBlocks node in
                       let (blocks, rb) = splitBlocks (tfdepth acc) opb in
-                      let bs = blocks in -- filter (\b -> totalDifficulty b >= diffThreshold view) blocks in
+                      let bs = filter (\b -> totalDifficulty b >= diffThreshold view) blocks in
                       let node' = node {openBlocks = []} in
                       foldl (\n pb -> forgeBlock pb n ts) node' blocks
 
@@ -307,6 +309,6 @@ updateNode nd network = network {nodes = ns}
 --blockTree :: Network -> BlockTree
 --blockTree sys = error "not impl"
 
--- todo: define canonical blockchain and implement it's extraction from blocktree of a system
+-- todo: define canonical blockchain and implement its extraction from blocktree of a system
 canonicalBlockchain :: Network -> Maybe BlockChain
 canonicalBlockchain sys = Nothing

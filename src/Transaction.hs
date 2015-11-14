@@ -39,7 +39,7 @@ data Transaction = Transaction { sender :: Account
                                , fee :: Int
                                , txTimestamp :: Timestamp
                                , payload :: VerifiableTransactionPayload
-                               } deriving (Show, Generic)
+                               } deriving (Show, Generic, Eq)
 
 
 instance FromJSON VerifiableTransactionPayload
@@ -52,13 +52,13 @@ instance ToJSON VerifiableTransactionPayload where
 --  toEncoding = genericToEncoding defaultOptions
 
 
-instance Eq Transaction where
-  t1 == t2 =    sender t1 == sender t2
-             && recipient t1   == recipient t2
-             && txTimestamp t1 == txTimestamp t2
+--instance Eq Transaction where
+--  t1 == t2 =    sender t1 == sender t2
+--             && recipient t1   == recipient t2
+--             && txTimestamp t1 == txTimestamp t2
 
-instance Ord Transaction where
-  compare t1 t2 = compare (txTimestamp t1) (txTimestamp t2)
+--instance Ord Transaction where
+--  compare t1 t2 = compare (txTimestamp t1) (txTimestamp t2)
 
 instance FromJSON Transaction
 

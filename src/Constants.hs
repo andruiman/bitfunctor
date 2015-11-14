@@ -10,7 +10,7 @@ maxHit :: Integer
 maxHit = 2^64
 
 systemBalance :: Int
-systemBalance = 10^9
+systemBalance = 14000000
 
 two64 :: Double
 two64 = 2**64
@@ -19,7 +19,7 @@ maxBlocksFromPeer :: Int
 maxBlocksFromPeer = 10*1440
 
 complexityPrice :: Int
-complexityPrice = 1000
+complexityPrice = 1000000
 
 -- tfdepth > 1 finite multibranch 
 --         = 1 singlebranch                                                                              

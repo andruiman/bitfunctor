@@ -52,15 +52,8 @@ earlyInvestors :: [Account]
 earlyInvestors = map (\i -> generateAccount $ mkStdGen i) []
 
 
--- godAccount :: Account
--- godAccount = Account {publicKey = B.pack[18, 89, -20, 33, -45, 26, 48, -119, -115, 124, -47, 96, -97, -128, -39, 102,
---                                         -117, 71, 120, -29, -39, 126, -108, 16, 68, -77, -97, 12, 68, -46, -27, 27], tfdepth = 0}
-
-
 genesisBlock :: Block
 genesisBlock = block where
-    -- amt = systemBalance `div` (length earlyInvestors)
-    -- genesisTxs = map (\ acc -> Transaction {sender = godAccount, recipient = acc, amount = amt, fee = 0, txTimestamp = 0}) earlyInvestors
     block = Block {transactions = [],  blockTimestamp = 0, baseTarget = initialBaseTarget, totalDifficulty = 0.0,
                          generator = godAccount, generationSignature = B.replicate 64 0}
 
@@ -190,16 +183,20 @@ downloadBlocks sd node network = resNetwork
 downloadBlocksNetwork :: SimulationData -> Network ->  Network
 downloadBlocksNetwork sd network = foldl (\nw n -> downloadBlocks sd n nw) network (nodes network)
 
-sendTransactionsOut :: SimulationData -> Node -> Network -> Network
-sendTransactionsOut sd node network = case randomNeighbour sd node network of
-                    Just neighbour ->   let txsToSend = pendingTxs node in
+sendTransactionsOutNode ::  Node -> Node -> Network -> Network
+sendTransactionsOutNode node neighbour network =
+                                        let txsToSend = pendingTxs node in
                                         let otherTxs = pendingTxs neighbour in
                                         let newTxs' = filter (\tx -> notElem tx otherTxs) txsToSend in
-                                        let nodeProcTxs = procTxs node in
-                                        let newTxs = filter (\tx -> notElem tx nodeProcTxs) newTxs' in
+                                        let neiProcTxs = procTxs neighbour in
+                                        let newTxs = filter (\tx -> notElem tx neiProcTxs) newTxs' in
                                         let updTxs = otherTxs ++ newTxs in
                                          updateNode neighbour {pendingTxs = updTxs} network
-                    Nothing -> network
+
+sendTransactionsOut :: SimulationData -> Node -> Network -> Network
+sendTransactionsOut sd node network = case randomNeighbour sd node network of
+                     Just neighbour -> sendTransactionsOutNode node neighbour network 
+                     Nothing -> network
 
 
 --it's probably no need to filter
@@ -271,7 +268,7 @@ generateTransactions :: SimulationData -> Network -> Network
 generateTransactions sd network = network {nodes = ns} where
                          ns = map (\n -> if (account n == godAccount ) then n else
                                     let gen = nodeGen sd n in
-                                    let r::Int = fst $ randomR (0, 60) gen in
+                                    let r::Int = fst $ randomR (0, 50) gen in
                                     case r of
                                      1 -> generateTransactionsForNode sd n network
                                      _ -> n) (nodes network)
@@ -317,7 +314,7 @@ systemTransform sd network = networkForge sd $
 
 
 goThrouhTimeline :: (Timestamp -> Network -> IO ()) -> (SimulationData, Network) -> IO (SimulationData, Network)
-goThrouhTimeline notifyState (sd, nw) | notExpired sd = do
+goThrouhTimeline notifyState (sd, nw) | (notExpired sd) && ((maximum $ map (\n -> accBalance n godAccount) (nodes nw)) > 0) = do
   let nextSimulationData = incTimestamp sd
   let nextNetworkState = systemTransform nextSimulationData nw
   notifyState (timestamp nextSimulationData) nextNetworkState

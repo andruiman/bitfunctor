@@ -4,6 +4,7 @@ module Main where
 import Simulation
 import Blockchain
 import Transaction
+import Theory
 import qualified Data.Map as Map
 import System.Directory
 import Data.ConfigFile as ConfigFile
@@ -16,11 +17,11 @@ import Control.Monad (filterM)
 
 
 outChain :: BlockChain -> String
-outChain chain = concat [chainInfo, diffInfo]
+outChain chain = chainInfo ++ diffInfo
     where
         diffInfo = concat ["Cumulative difficulty: ", show $ cumulativeDifficulty chain]
         chainInfo = foldl (\s b -> concat [s, show $ blockTimestamp b, " -> ", show $ generator b, "--",
-                                            show $ blockId b ," -- ", show $ baseTarget b, " -- ", show $ length $ transactions b, "\n "]) "" chain
+                                            show $ blockId b ,"--", show $ baseTarget b, "--", show $ length $ transactions b] ++ "\n") "" chain
 
 outChainNode :: Node -> String
 outChainNode node = outChain $ bestChain node
@@ -94,6 +95,11 @@ main = do
     putStrLn "\nFinal simulation results:"
     outputResults outDir 0 network
 
+    let view = localView $ last (nodes network)
+    let th = Map.findWithDefault Map.empty (bestBlock view) (blockTheory view)
+    putStrLn $ show th
+    putStrLn $ showDependentAtomCode "Function#head" th
+
     putStrLn "\nCryptocurrency simulation has been finished"
 
 
@@ -126,6 +132,9 @@ outputResults outdir ts network = do
   putStrLn "Open blocks:"
   putStrLn $ show $ (map (length.openBlocks) $ nodes network)
 
+  putStrLn "Blockchain 0:"
+  putStrLn $ (outChainNode $ ns !! 0)
+ 
 
   putStrLn "\n"
   putStrLn "Node Id : Self balance <-> Common chain lengths with other nodes: "
