@@ -100,15 +100,23 @@ main = do
     putStrLn "\nFinal simulation results:"
     outputResults outDir 0 network
 
+    putStrLn "\nCompiling theory:"
     let view = localView $ last (nodes network)
     let th = Map.findWithDefault Map.empty (bestBlock view) (blockTheory view)
-    
-    let func_name = "Function#sort"
-    let funcfile_name = "/Sort_out.v"
+    let fname = "sort"    
+    let func_name = "Function#" ++ fname
+    let funcfile_name = "/" ++ fname ++ "_out.v"
     let fullfuncfile_name = concat [outDir, funcfile_name]
     let thcode = showDependentAtomCode func_name th
     writeFile fullfuncfile_name thcode
     createProcess (proc "coqc" ["-verbose", fullfuncfile_name])
+
+    putStrLn "\nExtracting code:"
+    let s = "Extraction Language Haskell.\nExtraction \"" ++ fname ++ "\" " ++ fname ++ "."
+    let exname = concat [outDir, "/extract.v"]
+    let outname = concat [outDir, "/", fname, "_out"]
+    writeFile exname s
+    createProcess (proc "coqc" ["-verbose", "-require", outname, exname])
     
     putStrLn "\nCryptocurrency simulation has been finished"
 
