@@ -72,6 +72,7 @@ main = do
     let stateDir = forceEither $ ConfigFile.get cp "DEFAULT" "statedir"
 
     let coqcExe = forceEither $ ConfigFile.get cp "DEFAULT" "coqc"
+    let atomToExtract = forceEither $ ConfigFile.get cp "DEFAULT" "extract-theory-atom"
 
     dataFiles <- getDirectoryContents "data"
     let dataFilesFull = map (\f -> "data/" ++ f) dataFiles
@@ -105,19 +106,19 @@ main = do
     putStrLn "\nCompiling theory:"
     let view = localView $ last (nodes network)
     let th = Map.findWithDefault Map.empty (bestBlock view) (blockTheory view)
-    let fname = "sort"
-    let func_name = "Function#" ++ fname
-    let funcfile_name = "/" ++ fname ++ "_out.v"
+    let func_name = "Function#" ++ atomToExtract
+    let funcfile_name = "/" ++ atomToExtract ++ "_out.v"
     let fullfuncfile_name = concat [outDir, funcfile_name]
     let thcode = showDependentAtomCode func_name th
     writeFile fullfuncfile_name thcode
     createProcess (proc coqcExe ["-verbose", fullfuncfile_name])
 
     putStrLn "\nExtracting code:"
-    let s = "Extraction Language Haskell.\nExtraction \"" ++ fname ++ "\" " ++ fname ++ "."
+    let s = "Extraction Language Haskell.\nExtraction \"" ++ atomToExtract ++ "\" " ++ atomToExtract ++ "."
     let exname = concat [outDir, "/extract.v"]
-    let outname = concat [outDir, "/", fname, "_out"]
+    let outname = concat [outDir, "/", atomToExtract, "_out"]
     writeFile exname s
+    putStrLn $ coqcExe ++ concat ["-verbose", "-require", outname, exname]
     createProcess (proc coqcExe ["-verbose", "-require", outname, exname])
 
     putStrLn "\nCryptocurrency simulation has been finished"
