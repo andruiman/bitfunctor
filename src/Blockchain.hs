@@ -101,27 +101,26 @@ addMoney diff acc blns = let oldBalance = Map.findWithDefault 0 acc blns in
 -- added -(fee tx) to sender balance
 -- the order of arguments is changed to simplify later foldl's
 applyTx :: (Ledger, Theory) -> Transaction  -> (Ledger, Theory)
-applyTx (blns, th) tx = (bals2, th1)
-    where
-        bals1 = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender tx) blns
-        ma = toAtom (payload tx) th
-        case ma of
-          Just a -> 
-                 th1 = addAtom (toAtom (payload tx) th) th
-                 deltaCmpl = (theoryComplexity th1) - (theoryComplexity th)
-                 bonus = complexityPrice*deltaCmpl
-                 bals2 = addMoney (-bonus) godAccount $ addMoney bonus (sender tx) bals1
-                 amt = amount tx
+applyTx (blns, th) tx = case toAtom (payload tx) th of
+                          Just atom  -> (bals2, th1)
+                            where th1 = addAtom atom th
+                                  bals1 = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender tx) blns
+                                  bals2 = addMoney (-bonus) godAccount $ addMoney bonus (sender tx) bals1
+                                  bonus = complexityPrice*deltaCmpl
+                                  deltaCmpl = (theoryComplexity th1) - (theoryComplexity th)
+                                  amt = amount tx
+                          Nothing -> (blns, th)
+
 
 processBlock :: Block -> (Ledger, Theory) -> (Ledger, Theory)
 processBlock block (priorBalances, priorTheory) =
     (feesApplied, txAppliedT)
     where
         txs = transactions block
-        (txAppliedL, txAppliedT) = foldl applyTx (priorBalances, priorTheory) txs        
+        (txAppliedL, txAppliedT) = foldl applyTx (priorBalances, priorTheory) txs
         fees = sum (map fee txs)
         feesApplied = addMoney fees (generator block) txAppliedL
-        
+
 --processTheory :: Block -> Theory -> Theory
 --processTheory b t = foldl (\t tx -> addAtom (toAtom (payload tx) t) t) t $ transactions b
 
@@ -132,7 +131,7 @@ pushBlock node pb b =  let view = localView node in
                        if (Map.notMember b $ blockTree view) then
                         if (Map.member pb $ blockTree view) || (isGenesis pb) then
                            let prBal = Map.findWithDefault Map.empty pb $ blockBalances view in
-                           let prTh = Map.findWithDefault Map.empty pb $ blockTheory view in                           
+                           let prTh = Map.findWithDefault Map.empty pb $ blockTheory view in
                            let prTxs = Map.findWithDefault []       pb $ blockTransactions view in
                            let opb = addSortedBlock b (openBlocks node) in
                            let bb' = head opb in
