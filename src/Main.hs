@@ -71,6 +71,8 @@ main = do
     let outDir   = forceEither $ ConfigFile.get cp "DEFAULT" "outdir"
     let stateDir = forceEither $ ConfigFile.get cp "DEFAULT" "statedir"
 
+    let coqcExe = forceEither $ ConfigFile.get cp "DEFAULT" "coqc"
+
     dataFiles <- getDirectoryContents "data"
     let dataFilesFull = map (\f -> "data/" ++ f) dataFiles
     codeFiles <- filterM (doesFileExist) dataFilesFull
@@ -103,21 +105,21 @@ main = do
     putStrLn "\nCompiling theory:"
     let view = localView $ last (nodes network)
     let th = Map.findWithDefault Map.empty (bestBlock view) (blockTheory view)
-    let fname = "sort"    
+    let fname = "sort"
     let func_name = "Function#" ++ fname
     let funcfile_name = "/" ++ fname ++ "_out.v"
     let fullfuncfile_name = concat [outDir, funcfile_name]
     let thcode = showDependentAtomCode func_name th
     writeFile fullfuncfile_name thcode
-    createProcess (proc "coqc" ["-verbose", fullfuncfile_name])
+    createProcess (proc coqcExe ["-verbose", fullfuncfile_name])
 
     putStrLn "\nExtracting code:"
     let s = "Extraction Language Haskell.\nExtraction \"" ++ fname ++ "\" " ++ fname ++ "."
     let exname = concat [outDir, "/extract.v"]
     let outname = concat [outDir, "/", fname, "_out"]
     writeFile exname s
-    createProcess (proc "coqc" ["-verbose", "-require", outname, exname])
-    
+    createProcess (proc coqcExe ["-verbose", "-require", outname, exname])
+
     putStrLn "\nCryptocurrency simulation has been finished"
 
 
@@ -152,7 +154,7 @@ outputResults outdir ts network = do
 
   putStrLn "Blockchain 0:"
   putStrLn $ (outChainNode $ ns !! 0)
- 
+
 
   putStrLn "\n"
   putStrLn "Node Id : Self balance <-> Common chain lengths with other nodes: "
