@@ -14,6 +14,11 @@ import Data.Aeson (decode)
 import Data.Maybe (catMaybes)
 import Data.ByteString.Lazy as BL (readFile)
 import Control.Monad (filterM)
+import System.Process
+import System.Exit
+import GHC.IO.Handle
+import System.IO
+import Control.Concurrent
 
 
 outChain :: BlockChain -> String
@@ -97,9 +102,14 @@ main = do
 
     let view = localView $ last (nodes network)
     let th = Map.findWithDefault Map.empty (bestBlock view) (blockTheory view)
-    putStrLn $ show th
-    putStrLn $ showDependentAtomCode "Function#head" th
-
+    
+    let func_name = "Function#sort"
+    let funcfile_name = "/Sort_out.v"
+    let fullfuncfile_name = concat [outDir, funcfile_name]
+    let thcode = showDependentAtomCode func_name th
+    writeFile fullfuncfile_name thcode
+    createProcess (proc "coqc" ["-verbose", fullfuncfile_name])
+    
     putStrLn "\nCryptocurrency simulation has been finished"
 
 

@@ -22,12 +22,12 @@ addAtom a t = if (Map.member (name a) t) then t
 fetchDependentAtom :: String -> Theory -> [TheoryAtom]
 fetchDependentAtom s t = let atoms = let ma = Map.lookup s t in
                                      case ma of
-                                       Just a -> (uses a) ++ [a]-- (concat $ map (\a' -> fetchDependentAtom (name a') t) (uses a)) ++ [a]
+                                       Just a -> (concat $ map (\a' -> fetchDependentAtom (name a') t) (uses a)) ++ [a]
                                        Nothing -> []
                          in nub atoms
 
 showDependentAtomCode :: String -> Theory ->  String
-showDependentAtomCode s t = concat $ map code (fetchDependentAtom s t)
+showDependentAtomCode s t = concat $ map (\a -> code a ++ "\n") (fetchDependentAtom s t)
 
 
 --
