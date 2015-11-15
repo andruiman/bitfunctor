@@ -104,11 +104,14 @@ applyTx :: (Ledger, Theory) -> Transaction  -> (Ledger, Theory)
 applyTx (blns, th) tx = (bals2, th1)
     where
         bals1 = addMoney amt (recipient tx) $ addMoney (-amt-(fee tx)) (sender tx) blns
-        th1 = addAtom (toAtom (payload tx) th) th
-        deltaCmpl = (theoryComplexity th1) - (theoryComplexity th)
-        bonus = complexityPrice*deltaCmpl
-        bals2 = addMoney (-bonus) godAccount $ addMoney bonus (sender tx) bals1
-        amt = amount tx
+        ma = toAtom (payload tx) th
+        case ma of
+          Just a -> 
+                 th1 = addAtom (toAtom (payload tx) th) th
+                 deltaCmpl = (theoryComplexity th1) - (theoryComplexity th)
+                 bonus = complexityPrice*deltaCmpl
+                 bals2 = addMoney (-bonus) godAccount $ addMoney bonus (sender tx) bals1
+                 amt = amount tx
 
 processBlock :: Block -> (Ledger, Theory) -> (Ledger, Theory)
 processBlock block (priorBalances, priorTheory) =
