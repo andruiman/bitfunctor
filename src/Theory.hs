@@ -38,11 +38,14 @@ showDependentAtomCode s t = concat $ map (\a -> code a ++ "\n") (fetchDependentA
 toName :: (TheoryKind, String) -> String
 toName (k,s) = (show $ k) ++ "#" ++ s
 
-toAtom :: Tx.VerifiableTransactionPayload -> Theory -> TheoryAtom
-toAtom vtxp t = TheoryAtom {name = toName $ Tx.provides vtxp,
+toAtom :: Tx.VerifiableTransactionPayload -> Theory -> Maybe TheoryAtom
+toAtom vtxp t = let ma = map (\i -> Map.lookup (toName i) t) $ Tx.uses vtxp in
+                let cma = catMaybes ma in
+                if (length cma == length ma) then Just $ TheoryAtom {name = toName $ Tx.provides vtxp,
                             code = Tx.code vtxp,
                             kind = fst $ Tx.provides vtxp,
-                            uses = catMaybes $ map (\i -> Map.lookup (toName i) t) $ Tx.uses vtxp}
+                            uses = cma}
+                            else Nothing                           
 
 atomComplexity :: TheoryAtom -> Int
 atomComplexity a = case (kind a) of
