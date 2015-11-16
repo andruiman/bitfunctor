@@ -113,12 +113,15 @@ main = do
     writeFile fullfuncfile_name thcode
     createProcess (proc coqcExe ["-verbose", fullfuncfile_name])
 
+    -- TODO: createProcess doesnt wait for the termination, so the second process cannot find the result as it
+    -- is actually absent. run all the stuff in a single shell script with "&&"  
+
     putStrLn "\nExtracting code:"
     let s = "Extraction Language Haskell.\nExtraction \"" ++ atomToExtract ++ "\" " ++ atomToExtract ++ "."
     let exname = concat [outDir, "/extract.v"]
     let outname = concat [outDir, "/", atomToExtract, "_out"]
     writeFile exname s
-    putStrLn $ coqcExe ++ concat ["-verbose", "-require", outname, exname]
+    putStrLn $ coqcExe ++ concat [" -verbose", " -require ", outname, " ", exname]
     createProcess (proc coqcExe ["-verbose", "-require", outname, exname])
 
     putStrLn "\nCryptocurrency simulation has been finished"
